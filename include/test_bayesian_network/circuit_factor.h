@@ -1,24 +1,30 @@
 #ifndef CIRCUIT_FACTOR_H
 #define CIRCUIT_FACTOR_H
 #include <memory>
-#include <test_bayesian_network/circuit_manager.h>
 #include <test_bayesian_network/circuit_node.h>
 #include <vector>
 
 namespace test_bayesian_network {
+namespace test_circuit {
+class CircuitManager;
+}
 class CircuitFactor {
 public:
   // The variables must be sorted according to the index order
   CircuitFactor(std::vector<Variable *> variables,
                 std::vector<test_circuit::Node *> factor_nodes);
+  static size_t GetFactorSize(const std::vector<Variable *> &variables);
   static size_t GetEntryIndexFromVariableConfiguration(
       const std::vector<Variable *> &variables,
       const std::vector<DomainSize> &variable_config);
   static std::vector<DomainSize> GetVariableConfigurationFromEntryIndex(
       const std::vector<Variable *> &variables, size_t entry_index);
-  static bool CompareVariableForSorting(Variable* first, Variable* second);
+  static bool CompareVariableForSorting(Variable *first, Variable *second);
   test_circuit::Node *GetNodeFromVariableConfiguration(
       const std::vector<DomainSize> &variable_config) const;
+  void SetNodeFromVariableConfiguration(
+      const std::vector<DomainSize> &variable_config,
+      test_circuit::Node *new_node);
   std::unique_ptr<CircuitFactor>
   Multiply(const CircuitFactor &other,
            test_circuit::CircuitManager *circuit_manager) const;
@@ -30,7 +36,6 @@ public:
   const std::vector<test_circuit::Node *> factor_nodes() const {
     return factor_nodes_;
   }
-
 
 private:
   std::vector<Variable *> variables_;

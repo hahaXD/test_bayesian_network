@@ -43,6 +43,14 @@ test_circuit::Node *CircuitFactor::GetNodeFromVariableConfiguration(
   return factor_nodes_[entry_index];
 }
 
+void CircuitFactor::SetNodeFromVariableConfiguration(
+    const std::vector<DomainSize> &variable_config,
+    test_circuit::Node *new_node) {
+  size_t entry_index =
+      GetEntryIndexFromVariableConfiguration(variables_, variable_config);
+  factor_nodes_[entry_index] = new_node;
+}
+
 std::vector<DomainSize> CircuitFactor::GetVariableConfigurationFromEntryIndex(
     const std::vector<Variable *> &variables, size_t entry_index) {
   std::vector<DomainSize> variable_configuration(variables.size(), 0);
@@ -193,31 +201,13 @@ CircuitFactor::SumOut(Variable *sum_out_variable,
   return std::make_unique<CircuitFactor>(std::move(new_variables),
                                          std::move(new_factor_nodes));
 }
-/*
-  list<std::vector<DomainSize>> new_configuration_list;
-  new_configuration_list.push_back({});
-  NodeSize new_variable_it = 0;
-  while (new_variable_it < (NodeSize)new_variables.size()) {
-    auto cur_configuration_list_it = new_configuration_list.begin();
-    Variable *cur_variable = new_variables[new_variable_it];
-    const DomainSize cur_variable_domain_size = cur_variable->domain_size();
-    while (cur_configuration_list_it != new_configuration_list.end()) {
-      cur_configuration_list_it->push_back(0);
-      for (DomainSize i = 1; i < cur_variable_domain_size; ++i) {
-        std::vector<DomainSize> next_configuration = *cur_configuration_list_it;
-        ++cur_configuration_list_it; // points to element that is next to the
-                                     // last inserted element
-        // update the configuration of last variable to i
-        next_configuration.back() = i;
-        cur_configuration_list_it = new_configuration_list.insert(
-            cur_configuration_list_it,
-            std::move(next_configuration)); // points to the element that is
-                                            // just inserted.
-      }
-      ++cur_configuration_list_it;
-    }
-    ++new_variable_it;
+
+size_t CircuitFactor::GetFactorSize(const std::vector<Variable *> &variables) {
+  size_t result = 1;
+  for (Variable *cur_variable : variables) {
+    result *= cur_variable->domain_size();
   }
-*/
+  return result;
+}
 
 } // namespace test_bayesian_network

@@ -76,10 +76,29 @@ Node *CircuitManager::NewParameterTerminalNode(
 Node *CircuitManager::NewTestThresholdParameterTerminalNode(
     std::vector<Variable *> parent_variables, Variable *child_variable,
     std::vector<DomainSize> parent_configurations) {
-  node_cache_.push_back(std::make_unique<TestThresholdParameterTerminalNode>(
-      next_node_id_++, std::move(parent_variables), child_variable,
-      std::move(parent_configurations)));
-  return node_cache_.back().get();
+  auto variable_it =
+      unique_threshold_nodes_.find(child_variable->variable_index());
+  if (variable_it == unique_threshold_nodes_.end()) {
+    std::vector<Node *> factor(CircuitFactor::GetFactorSize(parent_variables),
+                               nullptr);
+    variable_it =
+        unique_threshold_nodes_
+            .insert(std::make_pair(child_variable->variable_index(),
+                                   CircuitFactor(parent_variables, factor)))
+            .first;
+  }
+  Node *result_node = variable_it->second.GetNodeFromVariableConfiguration(
+      parent_configurations);
+  if (result_node == nullptr) {
+    node_cache_.push_back(std::make_unique<TestThresholdParameterTerminalNode>(
+        next_node_id_++, std::move(parent_variables), child_variable,
+        std::move(parent_configurations)));
+    result_node = node_cache_.back().get();
+    variable_it->second.SetNodeFromVariableConfiguration(
+        result_node->get_parameter_terminal_node()->parent_configurations(),
+        result_node);
+  }
+  return result_node;
 }
 
 Node *CircuitManager::NewTestProbabilityParameterTerminalNode(
@@ -93,7 +112,6 @@ Node *CircuitManager::NewTestProbabilityParameterTerminalNode(
 }
 
 Node *CircuitManager::NewZNode(std::vector<Node *> children) {
-  std::sort(children.begin(), children.end(), compare_node_ids);
   node_cache_.push_back(
       std::make_unique<ZNode>(next_node_id_++, std::move(children)));
   return node_cache_.back().get();

@@ -4,6 +4,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <test_bayesian_network/circuit_manager.h>
+#include <test_bayesian_network/circuit_node.h>
 #include <test_bayesian_network/variable.h>
 namespace test_bayesian_network {
 namespace test_circuit {
@@ -35,6 +36,30 @@ TEST(CIRCUIT_MANAGER_TEST, WRITE_TO_FILE_TEST) {
   const std::string lmap_content_expected =
       "1 p 0 1=2 | \n2 p 0 1=1 | \n3 p 0 1=0 | \n";
   EXPECT_EQ(lmap_content_read, lmap_content_expected);
+}
+
+TEST(CIRCUIT_MANAGER_TEST, UNIQUE_THRESHOLD_TEST) {
+  CircuitManager cm;
+  Variable a(0, 3, variable_type::hidden);
+  Variable b(1, 3, variable_type::hidden);
+  Variable c(2, 3, variable_type::hidden);
+  std::vector<Variable *> parent_variables = {&a, &b};
+  std::vector<DomainSize> parent_conf = {1, 0};
+  Node *threshold_node = cm.NewTestThresholdParameterTerminalNode(
+      parent_variables, &c, parent_conf);
+  EXPECT_EQ(threshold_node->type(), node_type::threshold_parameter);
+  TestThresholdParameterTerminalNode *threshold_node_terminal =
+      threshold_node->get_test_threshold_parameter_terminal_node();
+  EXPECT_NE(threshold_node_terminal, nullptr);
+  EXPECT_THAT(threshold_node_terminal->parent_configurations(),
+              testing::ElementsAre(1, 0));
+  EXPECT_THAT(threshold_node_terminal->parent_variables(),
+              testing::ElementsAre(&a, &b));
+
+  // Construct again.
+  EXPECT_EQ(cm.NewTestThresholdParameterTerminalNode(parent_variables, &c,
+                                                     parent_conf),
+            threshold_node);
 }
 } // namespace test_circuit
 } // namespace test_bayesian_network

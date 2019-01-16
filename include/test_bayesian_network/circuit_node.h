@@ -124,6 +124,14 @@ public:
 
   ParameterTerminalNode *get_parameter_terminal_node() override { return this; }
 
+  const std::vector<DomainSize> &parent_configurations() const {
+    return parent_configurations_;
+  }
+
+  const std::vector<Variable *> &parent_variables() const {
+    return parent_variables_;
+  }
+
   DomainSize child_configuration() const { return child_configuration_; }
 
   Variable *child_variable() const { return child_variable_; }
