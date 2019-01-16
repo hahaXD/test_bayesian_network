@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(test_bayesian_network)
 include_directories(include)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-DSRC_DIRECTORY=${CMAKE_SOURCE_DIR}")
 if(APPLE)
   link_directories(lib/darwin)
