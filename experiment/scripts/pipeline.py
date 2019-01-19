@@ -8,6 +8,7 @@ import simulate_hmm
 import merge_hmm_parameters
 import math
 import logging
+import hmm
 
 def enable_logging_to_stdout():
     root = logging.getLogger()
@@ -79,6 +80,8 @@ if __name__ == "__main__":
     compiler_path = config["tac_compiler"]
     working_dir = config["working_dir"]
     cpt_selection = config["cpt_selection"]
+    emission_error = config.setdefault("emission_error", 0.2)
+    missing_pr = config.setdefault("missing_pr", 0)
     hmm_net_fname = "%s/hmm.net" % working_dir
     ac_fname_prefix = "%s/hmm" % working_dir
     thmm_net_fname = "%s/thmm.net" % working_dir
@@ -97,7 +100,9 @@ if __name__ == "__main__":
     merge_hmm_parameters.MergeParameters(ac_fname_prefix+".tac", ac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
     merge_hmm_parameters.MergeParameters(tac_fname_prefix+".tac", tac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
     # Simulate data
-    generated_examples, _, _, _ = simulate_hmm.GenerateRandomHardDatasetWithMCAR(config, training_size + testing_size, seed)
+    parameter_generator = hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
+    true_model = hmm.Hmm(chain_length, window_length, hidden_state_size, parameter_generator)
+    generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, seed);
     training_data = generated_examples[:training_size]
     testing_data = generated_examples[training_size:]
     training_dataset_fname = "%s/training.csv" % working_dir

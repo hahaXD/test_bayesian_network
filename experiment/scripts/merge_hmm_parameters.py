@@ -60,7 +60,7 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
             match = emission_initial_transition.match(line)
             if match:
                 emission_transition_cache[(match.group(2), match.group(3))] = match.group(1)
-                new_lmap_content.append("%s p 0 Ei=state%s | Ej=state%s" % (match.group(1), match.group(2), match.group(3)))
+                new_lmap_content.append("%s p 0 Ei=state%s | Hj=state%s" % (match.group(1), match.group(2), match.group(3)))
                 continue
             match = emission_transition.match(line)
             if match:

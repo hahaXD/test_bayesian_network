@@ -1,0 +1,12 @@
+{
+  "training_size": 128,
+  "tac_compiler": "./tbn_compiler",
+  "window_length": 5,
+  "working_dir": "output/",
+  "testing_size": 1000,
+  "hidden_state_size": 2,
+  "chain_length": 10,
+  "cpt_selection": "random",
+  "missing_pr": 0.2,
+  "emission_pr": 0.2
+}
