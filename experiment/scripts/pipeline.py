@@ -107,7 +107,7 @@ if __name__ == "__main__":
     #print (tac_mse/ac_mse)
     #print (tac_mae/ac_mae)
     print ("MSE : TAC, %s, AC, %s" % (tac_mse, ac_mse))
-    print ("MAE : TAC, %s, AC, %s" % (tac_mse, ac_mse))
+    print ("MAE : TAC, %s, AC, %s" % (tac_mae, ac_mae))
     with open("%s/prediction.txt"%working_dir,'w') as f:
 	    f.write("evidence BN  AC  TAC\n")
 	    for z in zip(testing_examples,testing_labels,ac_prediction,tac_prediction):
