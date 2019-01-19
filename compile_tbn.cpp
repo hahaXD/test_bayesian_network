@@ -6,6 +6,7 @@
 #include <test_bayesian_network/ve_test_circuit_compiler.h>
 
 namespace {
+using test_bayesian_network::Node;
 using test_bayesian_network::TestBayesianNetwork;
 using test_bayesian_network::VeTestCircuitCompiler;
 using test_bayesian_network::test_circuit::CircuitManager;
@@ -25,7 +26,13 @@ int main(int argc, const char *argv[]) {
   std::string lmap_filename = output_file_prefix + ".lmap";
   CircuitManager cm;
   auto compiler = VeTestCircuitCompiler(tbn.get(), &cm);
-  ZNode *result = compiler.Run();
+  std::vector<Node *> test_node_order;
+  for (Node *cur_node : tbn->nodes()) {
+    if (cur_node->type() == test_bayesian_network::node_type::test) {
+      test_node_order.push_back(cur_node);
+    }
+  }
+  ZNode *result = compiler.Run(test_node_order);
   CircuitManager::SaveAsTacFile(result, tac_filename.c_str(),
                                 lmap_filename.c_str());
 }

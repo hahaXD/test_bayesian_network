@@ -61,5 +61,36 @@ TEST(CIRCUIT_MANAGER_TEST, UNIQUE_THRESHOLD_TEST) {
                                                      parent_conf),
             threshold_node);
 }
+
+TEST(CIRCUIT_MANAGER_TEST, UNIQUE_GAMMA_TEST) {
+  CircuitManager cm;
+  Variable a(0, 3, variable_type::hidden);
+  Variable b(1, 3, variable_type::hidden);
+  Variable c(2, 3, variable_type::hidden);
+  std::vector<Variable *> parent_variables = {&a, &b};
+  std::vector<DomainSize> parent_conf = {1, 0};
+  Node *threshold_node =
+      cm.NewTestGammaParameterTerminalNode(parent_variables, &c, parent_conf);
+  EXPECT_EQ(threshold_node->type(), node_type::gamma_parameter);
+  TestGammaParameterTerminalNode *gamma_node_terminal =
+      threshold_node->get_test_gamma_parameter_terminal_node();
+  EXPECT_NE(gamma_node_terminal, nullptr);
+  EXPECT_THAT(gamma_node_terminal->parent_configurations(),
+              testing::ElementsAre(1, 0));
+  EXPECT_THAT(gamma_node_terminal->parent_variables(),
+              testing::ElementsAre(&a, &b));
+
+  // Construct again.
+  EXPECT_EQ(
+      cm.NewTestGammaParameterTerminalNode(parent_variables, &c, parent_conf),
+      threshold_node);
+  EXPECT_EQ(gamma_node_terminal->Label(), "2 | 0=1 1=0 Gamma");
+  Node *global_gamma = cm.NewTestGammaParameterTerminalNode({}, nullptr, {});
+  EXPECT_EQ(global_gamma->get_test_gamma_parameter_terminal_node()->Label(),
+            "GLOBAL Gamma");
+  EXPECT_EQ(cm.NewTestGammaParameterTerminalNode({}, nullptr, {}),
+            global_gamma);
+}
+
 } // namespace test_circuit
 } // namespace test_bayesian_network

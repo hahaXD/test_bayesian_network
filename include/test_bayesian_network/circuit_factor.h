@@ -33,7 +33,7 @@ public:
          test_circuit::CircuitManager *circuit_manager) const;
   const std::vector<Variable *> &variables() const { return variables_; }
 
-  const std::vector<test_circuit::Node *> factor_nodes() const {
+  const std::vector<test_circuit::Node *>& factor_nodes() const {
     return factor_nodes_;
   }
 

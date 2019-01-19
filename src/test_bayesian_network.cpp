@@ -72,7 +72,7 @@ TestBayesianNetwork::PrunedNetworkForTesting(
   return PruneNetwork(query_nodes, std::move(unselected_testing_nodes));
 }
 
-const std::vector<Node *> TestBayesianNetwork::nodes() const { return nodes_; }
+const std::vector<Node *>& TestBayesianNetwork::nodes() const { return nodes_; }
 
 std::vector<Variable *> TestBayesianNetwork::GetEliminationOrder(
     const std::vector<Node *> &nodes_to_query) const {
