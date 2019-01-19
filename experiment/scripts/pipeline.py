@@ -7,6 +7,17 @@ import learn.tac
 import simulate_hmm
 import merge_hmm_parameters
 import math
+import logging
+
+def enable_logging_to_stdout():
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    root.addHandler(handler)
+
 
 def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels, testing_examples, test_labels, config):
     gamma_min     = 8
@@ -58,22 +69,22 @@ if __name__ == "__main__":
     if len(sys.argv) <= 2:
         print ("Usage: <config> <seed>")
         sys.exit(1)
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     config = sys.argv[1]
     seed = int(sys.argv[2])
     with open(config, "r") as fp:
         config = json.load(fp)
     chain_length = config["chain_length"]
     hidden_state_size = config["hidden_state_size"]
-    hmm_net_fname = config["hmm_net_fname"]
-    ac_fname_prefix = config["hmm_net_fname_ac_prefix"]
-    thmm_net_fname = config["thmm_net_fname"]
-    tac_fname_prefix = config["hmm_net_fname_tac_prefix"]
     compiler_path = config["tac_compiler"]
     working_dir = config["working_dir"]
     cpt_selection = config["cpt_selection"]
+    hmm_net_fname = "%s/hmm.net" % working_dir
+    ac_fname_prefix = "%s/hmm" % working_dir
+    thmm_net_fname = "%s/thmm.net" % working_dir
+    tac_fname_prefix = "%s/thmm" % working_dir
     # simulator config
     window_length = config["window_length"] # window length for simulation
-    use_map_variable = config["use_map_variable"]
     # learning
     training_size = config["training_size"]
     testing_size = config["testing_size"]
@@ -86,11 +97,7 @@ if __name__ == "__main__":
     merge_hmm_parameters.MergeParameters(ac_fname_prefix+".tac", ac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
     merge_hmm_parameters.MergeParameters(tac_fname_prefix+".tac", tac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
     # Simulate data
-    sim_config = ConstructSimHmmConfig(config, training_size + testing_size, seed, seed)
-    #generated_examples, _, _, _ = simulate_hmm.GenerateRandomHardDatasetByMissing(sim_config)
-    #generated_examples, _, _, _ = simulate_hmm.GenerateRandomHardDatasetByMissingFromHidden(sim_config)
-    generated_examples, _, _, _ = simulate_hmm.GenerateRandomHardDatasetWithMCAR(sim_config, cpt_selection)
-    #generated_examples, _, _, _ = simulate_hmm.GenerateRandomHardDataset(sim_config)
+    generated_examples, _, _, _ = simulate_hmm.GenerateRandomHardDatasetWithMCAR(config, training_size + testing_size, seed)
     training_data = generated_examples[:training_size]
     testing_data = generated_examples[training_size:]
     training_dataset_fname = "%s/training.csv" % working_dir
@@ -104,8 +111,6 @@ if __name__ == "__main__":
     header,testing_examples,testing_labels = learn.data.read_csv(testing_dataset_fname)
     ac_mae,ac_mse, ac_prediction = TrainCircuit(ac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
     tac_mae, tac_mse, tac_prediction = TrainCircuit(tac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
-    #print (tac_mse/ac_mse)
-    #print (tac_mae/ac_mae)
     print ("MSE : TAC, %s, AC, %s" % (tac_mse, ac_mse))
     print ("MAE : TAC, %s, AC, %s" % (tac_mae, ac_mae))
     with open("%s/prediction.txt"%working_dir,'w') as f:
