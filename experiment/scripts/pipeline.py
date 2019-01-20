@@ -10,15 +10,6 @@ import math
 import logging
 import hmm
 
-def enable_logging_to_stdout():
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
-
 
 def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels, testing_examples, test_labels, config):
     gamma_min     = 8
@@ -42,7 +33,7 @@ def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels
         error_mse = error_mse + (p1-p2)**2
     error_mae  = error_mae/N_testing
     error_mse  = math.sqrt(error_mse/N_testing)
-    return error_mae, error_mse, predictions
+    return error_mae, error_mse, predictions, node_ac, weights
 
 
 def ConstructSimHmmConfig(config, num_example, parameter_seed = 0, simulation_seed = 0):
@@ -63,6 +54,22 @@ def save_dataset(examples, chain_size, fp, pr=True):
             fp.write(", %s\n" % cur_data["value"][0])
         else:
             fp.write(", %s\n" % cur_data["label"])
+
+def get_hmm_parameter_generator(config):
+    parameter_mod = config.setdefault("parameter_mod", "peak")
+    hidden_state_size = config["hidden_state_size"]
+    window_length = config["window_length"] # window length for simulation
+    emission_error = config.setdefault("emission_error", 0.2)
+    if parameter_mod == "peak":
+        logging.info("Parameter generation mode peak is used.")
+        return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
+    elif parameter_mod == "det_transition":
+        logging.info("Parameter generation mode det_transition is used.")
+        return hmm.HmmParameterGeneratorDetTransition(hidden_state_size, window_length, emission_error)
+    else:
+        logging.error("Parameter generation mode {0} cannot be recognized, using peak instead.".format(parameter_mod))
+        return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
+
 
 if __name__ == "__main__":
     # Load Config
@@ -98,9 +105,9 @@ if __name__ == "__main__":
     subprocess.check_call(shlex.split("%s %s %s" % (compiler_path, thmm_net_fname, tac_fname_prefix)));
     # tie parameters
     merge_hmm_parameters.MergeParameters(ac_fname_prefix+".tac", ac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
-    merge_hmm_parameters.MergeParameters(tac_fname_prefix+".tac", tac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
+    merge_hmm_parameters.MergeParameters(tac_fname_prefix+".tac", tac_fname_prefix+".lmap", tac_fname_prefix+".tac", tac_fname_prefix+".lmap")
     # Simulate data
-    parameter_generator = hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
+    parameter_generator = get_hmm_parameter_generator(config)
     true_model = hmm.Hmm(chain_length, window_length, hidden_state_size, parameter_generator)
     generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, seed);
     training_data = generated_examples[:training_size]
@@ -114,10 +121,14 @@ if __name__ == "__main__":
     # Preprocessing data
     header,training_examples,training_labels = learn.data.read_csv(training_dataset_fname)
     header,testing_examples,testing_labels = learn.data.read_csv(testing_dataset_fname)
-    ac_mae,ac_mse, ac_prediction = TrainCircuit(ac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
-    tac_mae, tac_mse, tac_prediction = TrainCircuit(tac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
+    ac_mae,ac_mse, ac_prediction, ac_node, ac_weight = TrainCircuit(ac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
+    tac_mae, tac_mse, tac_prediction, tac_node, tac_weight = TrainCircuit(tac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
     print ("MSE : TAC, %s, AC, %s" % (tac_mse, ac_mse))
     print ("MAE : TAC, %s, AC, %s" % (tac_mae, ac_mae))
+    ac_weight_lmap_fname = "%s/trained_ac.lmap" % working_dir
+    tac_weight_lmap_fname = "%s/trained_tac.lmap" % working_dir
+    learn.tac.Literal.lmap_write(ac_node.lmap, ac_weight, ac_weight_lmap_fname)
+    learn.tac.Literal.lmap_write(tac_node.lmap, tac_weight, tac_weight_lmap_fname)
     with open("%s/prediction.txt"%working_dir,'w') as f:
 	    f.write("evidence BN  AC  TAC\n")
 	    for z in zip(testing_examples,testing_labels,ac_prediction,tac_prediction):

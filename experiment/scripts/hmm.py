@@ -13,6 +13,37 @@ def sample_from_distribution(distribution, sim_gen):
             return i
     return len(dist) - 1;
 
+class HmmParameterGeneratorDetTransition:
+    def __init__(self, cardinality, window_size, emission_error):
+        self.cardinality = cardinality
+        self.window_size = window_size
+        self.emission_error = emission_error
+
+    def generate_initial_cpt(self):
+        parameter_size = int(math.pow(self.cardinality, self.window_size))
+        return np.array([1.0/(parameter_size) for i in range(0, parameter_size)]).reshape([self.cardinality]*self.window_size) # uniform
+
+    def generate_transition_cpt(self):
+        num_parent_states = int(math.pow(self.cardinality, self.window_size))
+        cpt = np.zeros([self.cardinality]*(self.window_size + 1)).reshape([num_parent_states, self.cardinality])
+        for i in range(0, num_parent_states):
+            cur_parent_config = np.unravel_index(i, [self.cardinality] * self.window_size)
+            cur_state = (cur_parent_config[0] + 1) % self.cardinality
+            cur_dist = [0 if i != cur_state else 1 for i in range(0, self.cardinality)]
+            cpt[i] = cur_dist
+        return cpt.reshape([self.cardinality] * (self.window_size+1))
+
+    def generate_emission_cpt(self):
+        cpt = np.zeros([self.cardinality, 2])
+        for i in range(0, self.cardinality):
+            # sensing whether the hidden state id is even or odd
+            if i % 2 == 0:
+                cpt[i][0] = 1 - self.emission_error
+                cpt[i][1] = self.emission_error
+            else:
+                cpt[i][0] = self.emission_error
+                cpt[i][1] = 1 - self.emission_error
+        return cpt
 
 class HmmParameterGenerateorWithPeak:
     def __init__(self, cardinality, window_size, emission_error):
