@@ -24,7 +24,7 @@ def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels
     # preprocessing data
     training_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,training_examples,node_ac)
     testing_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,testing_examples,node_ac)
-    predictions,weights  = learn.tac.learn(node_ac,training_inputs,training_labels,testing_inputs, rate=.005,thresh=1e-5,iterations=10000, grd_thresh=1e-5)
+    predictions,weights  = learn.tac.learn(node_ac,training_inputs,training_labels,testing_inputs, rate=.1,thresh=1e-5,iterations=10000, grd_thresh=1e-5)
     # report error
     N_testing  = len(testing_examples)
     N_training = len(training_examples)
@@ -58,18 +58,18 @@ def save_dataset(examples, chain_size, fp, pr=True):
             fp.write(", %s\n" % cur_data["label"])
 
 def get_hmm_parameter_generator(config):
-    parameter_mod = config.setdefault("parameter_mod", "peak")
+    parameter_mode = config.setdefault("parameter_mode", "peak")
     hidden_state_size = config["hidden_state_size"]
     window_length = config["window_length"] # window length for simulation
     emission_error = config.setdefault("emission_error", 0.2)
-    if parameter_mod == "peak":
+    if parameter_mode == "peak":
         logging.info("Parameter generation mode peak is used.")
         return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
-    elif parameter_mod == "det_transition":
+    elif parameter_mode == "det_transition":
         logging.info("Parameter generation mode det_transition is used.")
         return hmm.HmmParameterGeneratorDetTransition(hidden_state_size, window_length, emission_error)
     else:
-        logging.error("Parameter generation mode {0} cannot be recognized, using peak instead.".format(parameter_mod))
+        logging.error("Parameter generation mode {0} cannot be recognized, using peak instead.".format(parameter_mode))
         return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
 
 def logging_learned_matrix(lmap_fname):
@@ -95,10 +95,10 @@ def logging_learned_matrix(lmap_fname):
             if match:
                 key = (match.group(2), match.group(3))
                 pr = float(match.group(1))
-                if "+" in line:
+                if " +" in line:
                     # positive parameter
                     positive_transition[key] = pr
-                elif "-" in line:
+                elif " -" in line:
                     # negative parameter
                     negative_transition[key] = pr
                 else:
