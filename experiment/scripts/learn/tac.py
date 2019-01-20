@@ -421,7 +421,7 @@ def get_batch(examples,labels,size):
     return zip(*batch)
 
 def learn(node,training_examples,training_labels,testing_examples,
-          rate=0.5,iterations=1000,thresh=None,seed=None):
+          rate=0.5,iterations=1000,thresh=None, grd_thresh=None, seed=None):
     lmap,imap = node.lmap,node.imap
     indicator_count = sum(len(imap[var]) for var in imap)
     parameter_count = len(lmap)-indicator_count
@@ -446,7 +446,6 @@ def learn(node,training_examples,training_labels,testing_examples,
     grad = tf.gradients(loss,W)[0]
     #optimizer = tf.train.GradientDescentOptimizer(rate).minimize(loss,gate_gradients=gate)
     optimizer = tf.train.AdamOptimizer(learning_rate=rate).minimize(loss,gate_gradients=gate)
-
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         feed_dict = {x: training_examples, y_: training_labels}
@@ -461,14 +460,14 @@ def learn(node,training_examples,training_labels,testing_examples,
             optimizer.run(feed_dict=sgd_dict)
             """
             optimizer.run(feed_dict=feed_dict)
-            
             if iteration % (iterations/10) == 0:
                 err = loss.eval(feed_dict)
                 print( "== iteration %d ==================" % (iteration+1) )
-                #print "weights:"
                 print( "err: %.8g" % err )
-                print( "grd: %.8g" % sum(abs(grad.eval(feed_dict=feed_dict))) )
-                #print W.eval()
+                if grd_thresh is not None:
+                    cur_grd = sum(abs(grad.eval(feed_dict=feed_dict)))
+                    print( "grd: %.8g" %  cur_grd)
+                    if cur_grd < grd_thresh: break
                 if thresh is not None and err < thresh: break
         print( "final-itr: %d" % iteration )
         print( "final-err: %.8g" % loss.eval(feed_dict) )
