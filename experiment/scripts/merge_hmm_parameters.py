@@ -4,6 +4,7 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
     new_lmap_content = []
     positive_transition_cache = {}
     negative_transition_cache = {}
+    transition_cache = {}
     threshold_transition_cache = {}
     gamma_transition_cache = {}
     emission_transition_cache = {}
@@ -17,6 +18,8 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
     gamma_transition = re.compile(r"([0-9]+) p 0 H[0-9]+ \| H[0-9]+=state([0-9]+) +Gamma")
     emission_initial_transition = re.compile(r"([0-9]+) p 0 E0=state([0-9]+) \| H0=state([0-9]+)")
     emission_transition = re.compile(r"([0-9]+) p 0 E[0-9]+=state([0-9]+) \| H[0-9]+=state([0-9]+)")
+    initial_regular_transition = re.compile(r"([0-9]+) p 0 H1=state([0-9]+) \| H0=state([0-9]+) *$")
+    regular_transition = re.compile(r"([0-9]+) p 0 H[0-9]+=state([0-9]+) \| H[0-9]+=state([0-9]+) *$")
     literal_map = {}
     with open(lmap_fname, "r") as fp:
         for line in fp:
@@ -39,6 +42,15 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
             if match:
                 literal_map[match.group(1)] = negative_transition_cache[(match.group(2), match.group(3))]
                 continue
+            match = initial_regular_transition.match(line)
+            if match:
+                transition_cache[(match.group(2), match.group(3))] = match.group(1)
+                new_lmap_content.append("%s p 0 Hi=state%s | Hj=state%s" % (match.group(1), match.group(2), match.group(3)))
+                continue
+            match = regular_transition.match(line)
+            if match:
+                literal_map[match.group(1)] = transition_cache[(match.group(2), match.group(3))]
+                continue
             match = threshold_initial_transition.match(line)
             if match:
                 threshold_transition_cache[match.group(2)] = match.group(1)
@@ -60,7 +72,7 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
             match = emission_initial_transition.match(line)
             if match:
                 emission_transition_cache[(match.group(2), match.group(3))] = match.group(1)
-                new_lmap_content.append("%s p 0 Ei=state%s | Hj=state%s" % (match.group(1), match.group(2), match.group(3)))
+                new_lmap_content.append("%s p 0 Ei=state%s | Hi=state%s" % (match.group(1), match.group(2), match.group(3)))
                 continue
             match = emission_transition.match(line)
             if match:

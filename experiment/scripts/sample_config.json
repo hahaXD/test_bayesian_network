@@ -1,5 +1,5 @@
 {
-  "training_size": 128,
+  "training_size": 512,
   "tac_compiler": "./tbn_compiler",
   "window_length": 4,
   "working_dir": "output/",
