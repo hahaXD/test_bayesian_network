@@ -3,6 +3,7 @@ import json
 import subprocess, shlex
 from multiprocessing import Pool
 import shutil
+import math
 
 def single_run_helper(arg):
     single_run(*arg)
@@ -35,7 +36,8 @@ def single_run(work_dir, chain_length, hidden_state_size, window_size, training_
 
 def run_gamma_regression(min_value, max_value):
     for i in range(min_value, max_value):
-        cur_gamma_config = {"min":i, "max": (i+0.001), "default": i}
+        cur_value = math.pow(2, i)
+        cur_gamma_config = {"min":cur_value, "max": (cur_value+0.001), "default": cur_value}
         config = {"training_size": 512,
                   "tac_compiler": "./tbn_compiler",
                   "window_length": 2,
