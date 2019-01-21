@@ -13,6 +13,49 @@ def sample_from_distribution(distribution, sim_gen):
             return i
     return len(dist) - 1;
 
+class HmmParameterGeneratorRandomTransition:
+    def __init__(self,  cardinality, window, seed):
+        self.random_generator = random.Random(seed)
+        self.cardinality = cardinality
+        self.window_size = window
+
+    def generate_from_dirchlet (self, exponents):
+        pr = [ self.random_generator.gammavariate(cur_exponent, 1.0) for cur_exponent in exponents]
+        pr_sum = sum(pr)
+        return [ p/pr_sum for p in pr ]
+
+    def generate_initial_cpt(self):
+        parameter_size = int(math.pow(self.cardinality, self.window_size))
+        return np.array(self.generate_from_dirchlet([1 for i in range(0, parameter_size)])).reshape([self.cardinality]*self.window_size)
+
+    def generate_transition_cpt(self):
+        num_parent_states = int(math.pow(self.cardinality, self.window_size))
+        cpt = np.zeros([self.cardinality]*(self.window_size + 1)).reshape([num_parent_states, self.cardinality])
+        for i in range(0, num_parent_states):
+            cur_parent_config = np.unravel_index(i, [self.cardinality] * self.window_size)
+            cur_state = (cur_parent_config[0] + 1) % self.cardinality
+            cur_dist =  self.generate_from_dirchlet([1 for i in range(0, self.cardinality)])
+            cpt[i] = cur_dist
+        return cpt.reshape([self.cardinality] * (self.window_size+1))
+
+    def generate_emission_cpt(self):
+        emission_fp = 1.0 / (1.0 + math.exp(self.random_generator.gauss(4, 2)))
+        emission_fp = min(emission_fp, 1 - emission_fp)
+        emission_fn = 1.0 / (1.0 + math.exp(self.random_generator.gauss(4, 2)))
+        emission_fn = min(emission_fn, 1 - emission_fn)
+        cpt = np.zeros([self.cardinality, 2])
+        for i in range(0, self.cardinality):
+            # sensing whether the hidden state id is even or odd
+            if i % 2 == 0:
+                cpt[i][0] = 1 - emission_fp
+                cpt[i][1] = emission_fp
+            else:
+                cpt[i][0] = emission_fn
+                cpt[i][1] = 1 - emission_fn
+        return cpt
+
+
+
 class HmmParameterGeneratorDetTransition:
     def __init__(self, cardinality, window_size, emission_error):
         self.cardinality = cardinality
@@ -166,6 +209,8 @@ class Hmm:
             cur_record["value"] = pr
             records.append(cur_record)
         return records
+
+hmm_generator = HmmParameterGenerateorWithPeak(3,2,0.2)
 
 """
 def generate_random_distribution(num_state):

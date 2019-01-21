@@ -1,12 +1,13 @@
 {
   "tac_compiler": "./tbn_compiler",
   "working_dir": "output/",
-  "parameter_mode": "peak",
+  "parameter_mode": "dirchlet_random",
   "training_size": 512,
   "testing_size": 1024,
-  "hidden_state_size": 3,
+  "hidden_state_size": 2,
   "window_length": 2,
-  "chain_length": 8,
-  "missing_pr": 0.2,
+  "chain_length": 3,
+  "missing_pr": 0.4,
+  "missing_mode": "MCAR",
   "emission_error": 0.2
 }
