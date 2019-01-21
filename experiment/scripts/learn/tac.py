@@ -8,8 +8,13 @@ import tensorflow as tf
 
 # globals
 gamma_min = 4
-gamma_max = 32
+gamma_max = 64
+thresh_min = -2
+thresh_max = 2
 compiler = "haiying"
+
+assert gamma_min < gamma_max
+assert thresh_min < thresh_max
 
 def step(x,T,p,n):
     cond = tf.greater_equal(x,T)
@@ -283,8 +288,13 @@ class Literal:
                         p = 1.0 / (1.0 + tau)
                         weight = gamma_min + (gamma_max-gamma_min)*p
                     elif len(indices) == 1:
-                        tau = math.exp(-weights[lit.index])
-                        weight = tau / (1.0 + tau)
+                    	"""
+                    	tau = math.exp(-weights[lit.index])
+                    	weight = tau / (1.0 + tau)
+                    	"""
+                    	tau = math.exp(-weights[lit.index])
+                    	p = 1.0 / (1.0 + tau)
+                    	weight = thresh_min + (thresh_max-thresh_min)*p
                     else:
                         z = 1.0
                         for index in indices[1:]:
@@ -375,8 +385,13 @@ def _set_tf_nodes(x,W,lmap,imap,return_weights=False):
         elif len(indices) == 1:
             # untied parameter 
             # p = exp{-w} / ( 1 + exp{-w} )
+            """
             tau = tf.exp(-W[lit.index])
             exp_W[lit.index] = tau / ( 1.0 + tau )
+            """
+            tau = tf.exp(-W[lit.index])
+            exp_W[lit.index] = thresh_min + \
+                              (thresh_max-thresh_min) * (1.0/(1.0+tau))
             p = lit.weight
             if p == 0 or p == 1:
                 if not warned:

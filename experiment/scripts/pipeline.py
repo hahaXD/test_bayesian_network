@@ -13,18 +13,25 @@ import argparse
 
 import validation
 
-def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels, testing_examples, test_labels, config):
-    gamma_min     = 8
-    gamma_default = 16
-    gamma_max     = 32
+gamma_min     = -8
+gamma_default = 0
+gamma_max     = 8
+thresh_min    = -1
+thresh_max    = 1
+ac_learning_rate  = 0.1
+tac_learning_rate = 0.1
+
+def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels, testing_examples, test_labels, learning_rate, config):
     learn.tac.gamma_min = gamma_min
     learn.tac.gamma_max = gamma_max
     learn.tac.gamma_default = gamma_default
+    learn.tac.thresh_min = thresh_min
+    learn.tac.thresh_max = thresh_max
     node_ac = learn.tac.read_tac(fname_prefix+".tac",fname_prefix+".lmap")
     # preprocessing data
     training_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,training_examples,node_ac)
     testing_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,testing_examples,node_ac)
-    predictions,weights  = learn.tac.learn(node_ac,training_inputs,training_labels,testing_inputs, rate=.1,thresh=1e-5,iterations=10000, grd_thresh=1e-5)
+    predictions,weights  = learn.tac.learn(node_ac,training_inputs,training_labels,testing_inputs, rate=learning_rate,thresh=1e-5,iterations=10000, grd_thresh=1e-5)
     # report error
     N_testing  = len(testing_examples)
     N_training = len(training_examples)
@@ -217,8 +224,8 @@ if __name__ == "__main__":
     # Preprocessing data
     header,training_examples,training_labels = learn.data.read_csv(training_dataset_fname)
     header,testing_examples,testing_labels = learn.data.read_csv(testing_dataset_fname)
-    ac_mae,ac_mse, ac_prediction, ac_node, ac_weight = TrainCircuit(ac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
-    tac_mae, tac_mse, tac_prediction, tac_node, tac_weight = TrainCircuit(tac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, config)
+    ac_mae,ac_mse, ac_prediction, ac_node, ac_weight = TrainCircuit(ac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, ac_learning_rate,config)
+    tac_mae, tac_mse, tac_prediction, tac_node, tac_weight = TrainCircuit(tac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, tac_learning_rate,config)
     print ("MSE : TAC, %s, AC, %s, Ratio, %s" % (tac_mse, ac_mse, tac_mse / ac_mse))
     print ("MAE : TAC, %s, AC, %s, Ratio, %s" % (tac_mae, ac_mae, tac_mae / ac_mae))
     ac_weight_lmap_fname = "%s/trained_ac.lmap" % working_dir
