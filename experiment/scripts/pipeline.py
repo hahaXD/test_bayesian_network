@@ -10,15 +10,14 @@ import logging
 import hmm
 import re
 import argparse
-
 import validation
 
 gamma_min     = -8
 gamma_default = 0
 gamma_max     = 8
-thresh_min    = -1
+thresh_min    = 0
 thresh_max    = 1
-ac_learning_rate  = 0.1
+ac_learning_rate  = 0.01
 tac_learning_rate = 0.01
 
 def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels, testing_examples, test_labels, learning_rate, config):
@@ -27,6 +26,7 @@ def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels
     learn.tac.gamma_default = gamma_default
     learn.tac.thresh_min = thresh_min
     learn.tac.thresh_max = thresh_max
+    logging.info("Using gamma_min %s, gamma_default %s, gamma_max %s" % (gamma_min, gamma_default, gamma_max))
     node_ac = learn.tac.read_tac(fname_prefix+".tac",fname_prefix+".lmap")
     # preprocessing data
     training_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,training_examples,node_ac)
@@ -64,7 +64,7 @@ def save_dataset(examples, chain_size, fp, pr=True):
         else:
             fp.write(", %s\n" % cur_data["label"])
 
-def get_hmm_parameter_generator(config):
+def get_hmm_parameter_generator(config, seed):
     parameter_mode = config.setdefault("parameter_mode", "peak")
     hidden_state_size = config["hidden_state_size"]
     window_length = config["window_length"] # window length for simulation
@@ -75,6 +75,9 @@ def get_hmm_parameter_generator(config):
     elif parameter_mode == "det_transition":
         logging.info("Parameter generation mode det_transition is used.")
         return hmm.HmmParameterGeneratorDetTransition(hidden_state_size, window_length, emission_error)
+    elif parameter_mode == "dirchlet_random":
+        logging.info("Parameter generation mode dirchlet_random is used.")
+        return hmm.HmmParameterGeneratorRandomTransition(hidden_state_size, window_length, seed)
     else:
         logging.error("Parameter generation mode {0} cannot be recognized, using peak instead.".format(parameter_mode))
         return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
@@ -190,17 +193,22 @@ if __name__ == "__main__":
     logging.info("seed: %s" % seed)
     with open(config, "r") as fp:
         config = json.load(fp)
-    logging_config(config)
     chain_length = config["chain_length"]
     hidden_state_size = config["hidden_state_size"]
     compiler_path = config["tac_compiler"]
     working_dir = config["working_dir"]
     emission_error = config.setdefault("emission_error", 0.2)
+    missing_mode = config.setdefault("missing_mode", "MCAR")
     missing_pr = config.setdefault("missing_pr", 0)
+    gamma_config = config.setdefault("gamma_config", {"min": 7.999, "max":8, "default":0})
+    gamma_min = gamma_config["min"]
+    gamma_max = gamma_config["max"]
+    gamma_default = gamma_config["default"]
     hmm_net_fname = "%s/hmm.net" % working_dir
     ac_fname_prefix = "%s/hmm" % working_dir
     thmm_net_fname = "%s/thmm.net" % working_dir
     tac_fname_prefix = "%s/thmm" % working_dir
+    logging_config(config)
     # simulator config
     window_length = config["window_length"] # window length for simulation
     # learning
@@ -215,9 +223,9 @@ if __name__ == "__main__":
     merge_hmm_parameters.MergeParameters(ac_fname_prefix+".tac", ac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
     merge_hmm_parameters.MergeParameters(tac_fname_prefix+".tac", tac_fname_prefix+".lmap", tac_fname_prefix+".tac", tac_fname_prefix+".lmap")
     # Simulate data
-    parameter_generator = get_hmm_parameter_generator(config)
+    parameter_generator = get_hmm_parameter_generator(config, seed)
     true_model = hmm.Hmm(chain_length, window_length, hidden_state_size, parameter_generator)
-    generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, seed);
+    generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, missing_mode, seed);
     training_data = generated_examples[:training_size]
     testing_data = generated_examples[training_size:]
     training_dataset_fname = "%s/training.csv" % working_dir
@@ -231,25 +239,26 @@ if __name__ == "__main__":
     header,testing_examples,testing_labels = learn.data.read_csv(testing_dataset_fname)
     ac_mae,ac_mse, ac_prediction, ac_node, ac_weight = TrainCircuit(ac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, ac_learning_rate,config)
     tac_mae, tac_mse, tac_prediction, tac_node, tac_weight = TrainCircuit(tac_fname_prefix, ["E%s"% i for i in range(0, chain_length)], training_examples, training_labels, testing_examples, testing_labels, tac_learning_rate,config)
+    prediction_fname = "%s/prediction.txt" % working_dir
+    with open(prediction_fname,'w') as f:
+	    f.write("evidence BN  AC  TAC\n")
+	    for z in zip(testing_examples,testing_labels,ac_prediction,tac_prediction):
+		    f.write("%-20s\t%.6f\t%.6f\t%.6f\n" % z)
     print ("MSE : TAC, %s, AC, %s, Ratio, %s" % (tac_mse, ac_mse, tac_mse / ac_mse))
     print ("MAE : TAC, %s, AC, %s, Ratio, %s" % (tac_mae, ac_mae, tac_mae / ac_mae))
     ac_weight_lmap_fname = "%s/trained_ac.lmap" % working_dir
     tac_weight_lmap_fname = "%s/trained_tac.lmap" % working_dir
     ac_network_fname = "%s.tac" % ac_fname_prefix
     tac_network_fname = "%s.tac" % tac_fname_prefix
-    prediction_fname = "%s/prediction.txt" % working_dir
     learn.tac.Literal.lmap_write(ac_node.lmap, ac_weight, ac_weight_lmap_fname)
     learn.tac.Literal.lmap_write(tac_node.lmap, tac_weight, tac_weight_lmap_fname)
-    with open(prediction_fname,'w') as f:
-	    f.write("evidence BN  AC  TAC\n")
-	    for z in zip(testing_examples,testing_labels,ac_prediction,tac_prediction):
-		    f.write("%-20s\t%.6f\t%.6f\t%.6f\n" % z)
     logging.info("Logging learned parameters for AC:")
     logging_learned_matrix(ac_weight_lmap_fname)
     logging.info("Logging learned parameters for TAC:")
     logging_learned_matrix(tac_weight_lmap_fname)
     logging.info("Running verification")
     validation.validateHMM(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname, true_model)
+    #validation.validate(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname)
 
 def java_sim():
     ## Generates simulating network

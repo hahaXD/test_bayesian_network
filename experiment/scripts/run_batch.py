@@ -3,6 +3,8 @@ import json
 import subprocess, shlex
 from multiprocessing import Pool
 import shutil
+import math
+import sys
 
 def single_run_helper(arg):
     single_run(*arg)
@@ -33,7 +35,37 @@ def single_run(work_dir, chain_length, hidden_state_size, window_size, training_
     with open (result_filename, "w") as fp:
         fp.write(result.decode("utf-8"))
 
+def run_gamma_regression(min_value, max_value, child_dir):
+    for i in range(min_value, max_value):
+        for j in range(0,5):
+            cur_value = math.pow(2, i)
+            cur_gamma_config = {"min":cur_value, "max": (cur_value+0.001), "default": cur_value}
+            config = {"training_size": 512,
+                    "tac_compiler": "./tbn_compiler",
+                    "window_length": 2,
+                    "working_dir": child_dir,
+                    "testing_size": 10000,
+                    "hidden_state_size": 2,
+                    "chain_length": 6,
+                    "emission_error": 0.2,
+                    "missing_pr": 0.2,
+                    "parameter_mode": "det_transition",
+                    "gamma_config": cur_gamma_config
+                }
+            with open ("%s/gamma_test_config.json" % child_dir, "w") as fp:
+                json.dump(config, fp, indent=2)
+            result_filename = "%s/result_%s_%s.txt" % (child_dir,i,j)
+            result = subprocess.check_output(shlex.split("python3 pipeline.py %s/gamma_test_config.json %s" % (child_dir, j)))
+            with open (result_filename, "w") as fp:
+                fp.write(result.decode("utf-8"))
 
+if __name__ == "__main__":
+    gamma_min = int(sys.argv[1])
+    gamma_max = int(sys.argv[2])
+    child_dir = sys.argv[3]
+    run_gamma_regression(gamma_min, gamma_max,child_dir)
+
+"""
 if __name__ =="__main__":
     import sys
     core = int(sys.argv[1])
@@ -50,3 +82,4 @@ if __name__ =="__main__":
     p = Pool(core)
     p.map(single_run_helper, total_args)
 
+"""

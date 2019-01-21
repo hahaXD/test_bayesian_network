@@ -7,10 +7,10 @@ import numpy as np
 import tensorflow as tf
 
 # globals
-gamma_min = 4
-gamma_max = 64
-thresh_min = -2
-thresh_max = 2
+gamma_min =  50000
+gamma_max =  50000.1
+thresh_min = 1
+thresh_max = 1.0001
 compiler = "jason"
 
 assert gamma_min < gamma_max
