@@ -235,9 +235,9 @@ class ArithmeticCircuit:
             elif type(node) == NormalizeNode:
                 num_normal_nodes += 1
                 num_edges += len(node.children)
-        print(f'TAC summary: {num_nodes_total} nodes, {num_edges} edges')
-        print(f'{num_add_nodes} AddNodes, {num_multiply_nodes} MultiplyNodes, {num_alive_test_nodes} of {num_test_nodes} TestingNodes are alive')
-        print(f'{num_ind_nodes} indicators, {num_param_nodes} parameters, {num_thres_nodes} thresholds, {num_gamma_nodes} gammas, and {num_normal_nodes} NormalizeNodes.')
+        print('TAC summary: %s nodes, %s edges' % (num_nodes_total, num_edges))
+        print('%s AddNodes, %s MultiplyNodes, %s of %s TestingNodes are alive'% (num_add_nodes, num_multiply_nodes, num_alive_test_nodes, num_test_nodes))
+        print('%s indicators, %s parameters, %s thresholds, %s gammas, and %s NormalizeNodes.'% (num_ind_nodes, num_param_nodes, num_thres_nodes, num_gamma_nodes, num_normal_nodes))
 
 # save the tac to .tac & .lmap file
 def tac2file(tac,filename):
@@ -265,7 +265,7 @@ def tac2fileRec(node, ftac,flmap):
             ids.append(str(id))
         t = '+' if type(node) == AddNode else ('*' if type(node) == MultiplyNode else 'Z')
         visits[node] = len(visits)+1
-        ftac.write(f'{visits[node]} {t} {len(ids)} '+' '.join(ids)+'\n')
+        ftac.write('%s %s %s '%(visits[node], t, len(ids))+' '.join(ids)+'\n')
         node.id = visits[node]
         return visits[node]
     elif type(node) == TestingNode:
@@ -274,22 +274,22 @@ def tac2fileRec(node, ftac,flmap):
         visits[node] = len(visits)+1
         if len(ids) < 5:
             raise RunTimeError('Incomplete testing node.')
-        ftac.write(f'{visits[node]} ? {len(ids)} ' + ' '.join(ids) + '\n')
+        ftac.write('%s ? %s '%(visits[node],len(ids)) + ' '.join(ids) + '\n')
         node.id = visits[node]
         return visits[node]
     elif type(node) == ParameterNode:
         visits[node] = len(visits)+1
         lVisits[node] = len(lVisits) + 1
-        ftac.write(f'{visits[node]} L {lVisits[node]}' + '\n')
-        flmap.write(f'{lVisits[node]} p {node.value} {node.label}'+'\n')
+        ftac.write('%s L %s'%(visits[node], lVisits[node])+ '\n')
+        flmap.write('%s p %s %s'%(lVisits[node], node.value, node.label)+'\n')
         node.id = visits[node]
         return visits[node]
     else:
         assert(type(node) == IndicatorNode)
         visits[node] = len(visits)+1
         lVisits[node] = len(lVisits)+1
-        flmap.write(f'{lVisits[node]} i {node.label}={node.inst}' + '\n')
-        ftac.write(f'{visits[node]} L {lVisits[node]}' + '\n')
+        flmap.write('%s i %s=%s'%(lVisits[node], node.label, node.inst) + '\n')
+        ftac.write('%s L %s'%(visits[node], lVisits[node]) + '\n')
         node.id = visits[node]
         return visits[node]
 
@@ -490,7 +490,7 @@ class TestingNode(GeneralNode):
                     tau = sigmoid(self.gamma.value, self.x.value / self.norm.value - self.thres.value)
                 except ZeroDivisionError:
                     print('divide by 0!')
-                    print(f'id={self.id} x={self.x.value} n={self.norm.value}')
+                    print('id=%s x=%s n=%s'% (self.id,self.x.value,self.norm.value))
                     exit(0)
                 self.value = tau * self.thetaP.value + (1 - tau) * self.thetaN.value
             else:
