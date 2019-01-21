@@ -11,7 +11,7 @@ gamma_min = 4
 gamma_max = 64
 thresh_min = -2
 thresh_max = 2
-compiler = "haiying"
+compiler = "jason"
 
 assert gamma_min < gamma_max
 assert thresh_min < thresh_max
