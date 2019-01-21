@@ -11,7 +11,7 @@ import hmm
 import re
 import argparse
 
-import validation
+#import validation
 
 gamma_min     = 8
 gamma_default = 8
@@ -27,7 +27,7 @@ def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels
     learn.tac.gamma_default = gamma_default
     learn.tac.thresh_min = thresh_min
     learn.tac.thresh_max = thresh_max
-    loggging.info("Using gamma_min %s, gamma_default %s, gamma_max %s" % (gamma_min, gamma_default, gamma_max))
+    logging.info("Using gamma_min %s, gamma_default %s, gamma_max %s" % (gamma_min, gamma_default, gamma_max))
     node_ac = learn.tac.read_tac(fname_prefix+".tac",fname_prefix+".lmap")
     # preprocessing data
     training_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,training_examples,node_ac)
