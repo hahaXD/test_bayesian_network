@@ -34,6 +34,49 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
                 negative_transition_cache[(match.group(2), match.group(3))] = match.group(1)
                 new_lmap_content.append("%s p 0 Hi=state%s | Hj=state%s -" % (match.group(1), match.group(2), match.group(3)))
                 continue
+            match = initial_regular_transition.match(line)
+            if match:
+                transition_cache[(match.group(2), match.group(3))] = match.group(1)
+                new_lmap_content.append("%s p 0 Hi=state%s | Hj=state%s" % (match.group(1), match.group(2), match.group(3)))
+                continue
+            match = threshold_initial_transition.match(line)
+            if match:
+                threshold_transition_cache[match.group(2)] = match.group(1)
+                new_lmap_content.append("%s p 0 Hi | Hj=state%s Thres" % (match.group(1), match.group(2)))
+                continue
+            match = gamma_initial_transition.match(line)
+            if match:
+                gamma_transition_cache[match.group(2)] = match.group(1)
+                new_lmap_content.append("%s p 0 Hi | Hj=state%s Gamma" % (match.group(1), match.group(2)))
+                continue
+            match = emission_initial_transition.match(line)
+            if match:
+                emission_transition_cache[(match.group(2), match.group(3))] = match.group(1)
+                new_lmap_content.append("%s p 0 Ei=state%s | Hi=state%s" % (match.group(1), match.group(2), match.group(3)))
+                continue
+            # initial parameter
+            new_lmap_content.append(line)
+    with open(lmap_fname, "r") as fp:
+        for line in fp:
+            line = line.strip()
+            match = positive_initial_transition.match(line)
+            if match:
+                continue
+            match = negative_initial_transition.match(line)
+            if match:
+                continue
+            match = initial_regular_transition.match(line)
+            if match:
+                continue
+            match = threshold_initial_transition.match(line)
+            if match:
+                continue
+            match = gamma_initial_transition.match(line)
+            if match:
+                continue
+            match = emission_initial_transition.match(line)
+            if match:
+                continue
             match = positive_transition.match(line)
             if match:
                 literal_map[match.group(1)] = positive_transition_cache[(match.group(2), match.group(3))]
@@ -42,63 +85,51 @@ def MergeParameters(tac_fname, lmap_fname, new_tac_fname, new_lmap_fname):
             if match:
                 literal_map[match.group(1)] = negative_transition_cache[(match.group(2), match.group(3))]
                 continue
-            match = initial_regular_transition.match(line)
-            if match:
-                transition_cache[(match.group(2), match.group(3))] = match.group(1)
-                new_lmap_content.append("%s p 0 Hi=state%s | Hj=state%s" % (match.group(1), match.group(2), match.group(3)))
-                continue
             match = regular_transition.match(line)
             if match:
                 literal_map[match.group(1)] = transition_cache[(match.group(2), match.group(3))]
-                continue
-            match = threshold_initial_transition.match(line)
-            if match:
-                threshold_transition_cache[match.group(2)] = match.group(1)
-                new_lmap_content.append("%s p 0 Hi | Hj=state%s Thres" % (match.group(1), match.group(2)))
                 continue
             match = threshold_transition.match(line)
             if match:
                 literal_map[match.group(1)] = threshold_transition_cache[match.group(2)]
                 continue
-            match = gamma_initial_transition.match(line)
-            if match:
-                gamma_transition_cache[match.group(2)] = match.group(1)
-                new_lmap_content.append("%s p 0 Hi | Hj=state%s Gamma" % (match.group(1), match.group(2)))
-                continue
             match = gamma_transition.match(line)
             if match:
                 literal_map[match.group(1)] = gamma_transition_cache[match.group(2)]
                 continue;
-            match = emission_initial_transition.match(line)
-            if match:
-                emission_transition_cache[(match.group(2), match.group(3))] = match.group(1)
-                new_lmap_content.append("%s p 0 Ei=state%s | Hi=state%s" % (match.group(1), match.group(2), match.group(3)))
-                continue
             match = emission_transition.match(line)
             if match:
                 literal_map[match.group(1)] = emission_transition_cache[(match.group(2), match.group(3))]
                 continue;
-            # initial parameter
-            new_lmap_content.append(line)
     new_tac_content = []
     literal_id_to_node_id = {}
-    old_node_id_to_new_literal_id = {}
+    node_id_to_literal_id = {}
     with open(tac_fname, "r") as fp:
         for line in fp:
             line = line.strip()
             toks = line.split()
             if toks[1] == "L":
+                node_id_to_literal_id[toks[0]] = toks[2]
                 literal_id_to_node_id[toks[2]] = toks[0]
-                if toks[2] in literal_map:
-                    old_node_id_to_new_literal_id[toks[0]] = literal_map[toks[2]]
-                else:
+    with open(tac_fname, "r") as fp:
+        for line in fp:
+            line = line.strip()
+            toks = line.split()
+            if toks[1] == "L":
+                if toks[2] not in literal_map:
                     new_tac_content.append(line)
-            else:
+    with open(tac_fname, "r") as fp:
+        for line in fp:
+            line = line.strip()
+            toks = line.split()
+            if toks[1] != "L":
                 for i in range(3, len(toks)):
-                    if toks[i] in old_node_id_to_new_literal_id:
-                        replacing_literal_id = old_node_id_to_new_literal_id[toks[i]]
-                        updated_node_id = literal_id_to_node_id[replacing_literal_id]
-                        toks[i] = updated_node_id
+                    if toks[i] in node_id_to_literal_id:
+                        cur_literal = node_id_to_literal_id[toks[i]]
+                        if cur_literal in literal_map:
+                            new_literal_id = literal_map[cur_literal]
+                            new_id = literal_id_to_node_id[new_literal_id]
+                            toks[i] = new_id
                 new_tac_content.append(" ".join(toks))
     with open(new_tac_fname, "w") as fp:
         fp.write("\n".join(new_tac_content))
