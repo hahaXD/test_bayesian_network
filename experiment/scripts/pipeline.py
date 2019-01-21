@@ -19,7 +19,7 @@ gamma_max     = 8
 thresh_min    = -1
 thresh_max    = 1
 ac_learning_rate  = 0.1
-tac_learning_rate = 0.1
+tac_learning_rate = 0.01
 
 def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels, testing_examples, test_labels, learning_rate, config):
     learn.tac.gamma_min = gamma_min
@@ -172,6 +172,10 @@ def logging_learned_matrix(lmap_fname):
     return result
 
 
+def logging_config(config):
+    for key in config:
+        logging.info("%s: %s" % (key, config[key]))
+
 if __name__ == "__main__":
     # Load Config
     import sys
@@ -186,6 +190,7 @@ if __name__ == "__main__":
     logging.info("seed: %s" % seed)
     with open(config, "r") as fp:
         config = json.load(fp)
+    logging_config(config)
     chain_length = config["chain_length"]
     hidden_state_size = config["hidden_state_size"]
     compiler_path = config["tac_compiler"]
