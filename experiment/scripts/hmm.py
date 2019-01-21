@@ -139,7 +139,7 @@ class Hmm:
         query_partition = np.sum(query_result)
         return [a/query_partition for a in query_result]
 
-    def generate_dataset(self, num_examples, missing_pr, seed):
+    def generate_dataset(self, num_examples, missing_pr,missing_mode, seed):
         r_generator = random.Random(seed)
         records = []
         for i in range(0, num_examples):
@@ -147,11 +147,18 @@ class Hmm:
             cur_evid = []
             for j in range(0, self.chain_size):
                 cur_rand = r_generator.random()
-                if (cur_rand < missing_pr):
-                    # missing
-                    cur_evid.append(0.5)
+                if missing_mode == "MCAR":
+                    if (cur_rand < missing_pr):
+                        # missing
+                        cur_evid.append(0.5)
+                    else:
+                        cur_evid.append(float(1-cur_e[j]))
                 else:
-                    cur_evid.append(float(1-cur_e[j]))
+                    # recent
+                    if j >= (1-missing_pr) * self.chain_size:
+                        cur_evid.append(0.5)
+                    else:
+                        cur_evid.append(float(1-cur_e[j]))
             pr = self.inference(cur_evid)
             cur_record = {}
             cur_record["input"] = cur_evid

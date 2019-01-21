@@ -13,10 +13,10 @@ import argparse
 
 import validation
 
-gamma_min     = -8
-gamma_default = 0
-gamma_max     = 8
-thresh_min    = -1
+gamma_min     = 8
+gamma_default = 8
+gamma_max     = 8.0001
+thresh_min    = 0
 thresh_max    = 1
 ac_learning_rate  = 0.1
 tac_learning_rate = 0.01
@@ -27,6 +27,7 @@ def TrainCircuit(fname_prefix, evidence_vars, training_examples, training_labels
     learn.tac.gamma_default = gamma_default
     learn.tac.thresh_min = thresh_min
     learn.tac.thresh_max = thresh_max
+    loggging.info("Using gamma_min %s, gamma_default %s, gamma_max %s" % (gamma_min, gamma_default, gamma_max))
     node_ac = learn.tac.read_tac(fname_prefix+".tac",fname_prefix+".lmap")
     # preprocessing data
     training_inputs = learn.data.binary_dataset_to_tac_inputs(evidence_vars,training_examples,node_ac)
@@ -190,17 +191,22 @@ if __name__ == "__main__":
     logging.info("seed: %s" % seed)
     with open(config, "r") as fp:
         config = json.load(fp)
-    logging_config(config)
     chain_length = config["chain_length"]
     hidden_state_size = config["hidden_state_size"]
     compiler_path = config["tac_compiler"]
     working_dir = config["working_dir"]
     emission_error = config.setdefault("emission_error", 0.2)
+    missing_mode = config.setdefault("missing_mode", "MCAR")
     missing_pr = config.setdefault("missing_pr", 0)
+    gamma_config = config.setdefault("gamma_config", {"min": -8, "max":8, "default":0})
+    gamma_min = gamma_config["min"]
+    gamma_max = gamma_config["max"]
+    gamma_default = gamma_config["default"]
     hmm_net_fname = "%s/hmm.net" % working_dir
     ac_fname_prefix = "%s/hmm" % working_dir
     thmm_net_fname = "%s/thmm.net" % working_dir
     tac_fname_prefix = "%s/thmm" % working_dir
+    logging_config(config)
     # simulator config
     window_length = config["window_length"] # window length for simulation
     # learning
@@ -217,7 +223,7 @@ if __name__ == "__main__":
     # Simulate data
     parameter_generator = get_hmm_parameter_generator(config)
     true_model = hmm.Hmm(chain_length, window_length, hidden_state_size, parameter_generator)
-    generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, seed);
+    generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, missing_mode, seed);
     training_data = generated_examples[:training_size]
     testing_data = generated_examples[training_size:]
     training_dataset_fname = "%s/training.csv" % working_dir
@@ -249,7 +255,7 @@ if __name__ == "__main__":
     logging.info("Logging learned parameters for TAC:")
     logging_learned_matrix(tac_weight_lmap_fname)
     logging.info("Running verification")
-    validation.validate(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname)
+    #validation.validate(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname)
 
 def java_sim():
     ## Generates simulating network

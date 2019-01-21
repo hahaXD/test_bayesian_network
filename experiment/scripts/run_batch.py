@@ -33,7 +33,34 @@ def single_run(work_dir, chain_length, hidden_state_size, window_size, training_
     with open (result_filename, "w") as fp:
         fp.write(result.decode("utf-8"))
 
+def run_gamma_regression(min_value, max_value):
+    for i in range(min_value, max_value):
+        cur_gamma_config = {"min":i, "max": (i+0.001), "default": i}
+        config = {"training_size": 512,
+                  "tac_compiler": "./tbn_compiler",
+                  "window_length": 2,
+                  "working_dir": "gamma_config_test",
+                  "testing_size": 10000,
+                  "hidden_state_size": 2,
+                  "chain_length": 6,
+                  "emission_error": 0.2,
+                  "missing_pr": 0.2,
+                  "parameter_mode": "peak",
+                  "gamma_mode": cur_gamma_config
+              }
+        with open ("gamma_test_config.json", "w") as fp:
+            json.dump(cur_gamma_config)
+        result_filename = "gamma_config_test/result_%s.txt" % i
+        result = subprocess.check_output(shlex.split("python3 pipeline.py gamma_test_config.json %s" % (i)))
+        with open (result_filename, "w") as fp:
+            fp.write(result.decode("utf-8"))
 
+if __name__ == "__main__":
+    gamma_min = int(sys.argv[1])
+    gamma_max = int(sys.argv[2])
+    run_gamma_regression(gamma_min, gamma_max)
+
+"""
 if __name__ =="__main__":
     import sys
     core = int(sys.argv[1])
@@ -50,3 +77,4 @@ if __name__ =="__main__":
     p = Pool(core)
     p.map(single_run_helper, total_args)
 
+"""
