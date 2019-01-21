@@ -12,7 +12,6 @@ import re
 import argparse
 
 #import validation
-
 gamma_min     = 8
 gamma_default = 8
 gamma_max     = 8.0001

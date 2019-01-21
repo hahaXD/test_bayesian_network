@@ -50,7 +50,7 @@ def run_gamma_regression(min_value, max_value, child_dir):
                     "emission_error": 0.2,
                     "missing_pr": 0.2,
                     "parameter_mode": "det_transition",
-                    "gamma_mode": cur_gamma_config
+                    "gamma_config": cur_gamma_config
                 }
             with open ("%s/gamma_test_config.json" % child_dir, "w") as fp:
                 json.dump(config, fp, indent=2)
