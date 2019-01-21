@@ -249,7 +249,7 @@ if __name__ == "__main__":
     logging.info("Logging learned parameters for TAC:")
     logging_learned_matrix(tac_weight_lmap_fname)
     logging.info("Running verification")
-    validation.validate(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname)
+    validation.validateHMM(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname, true_model)
 
 def java_sim():
     ## Generates simulating network
