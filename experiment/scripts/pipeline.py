@@ -71,13 +71,17 @@ def get_hmm_parameter_generator(config, seed):
     emission_error = config.setdefault("emission_error", 0.2)
     if parameter_mode == "peak":
         logging.info("Parameter generation mode peak is used.")
-        return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
+        return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error, seed);
     elif parameter_mode == "det_transition":
         logging.info("Parameter generation mode det_transition is used.")
         return hmm.HmmParameterGeneratorDetTransition(hidden_state_size, window_length, emission_error)
     elif parameter_mode == "dirchlet_random":
-        logging.info("Parameter generation mode dirchlet_random is used.")
+        logging.info(
+            "Parameter generation mode dirchlet_random is used.")
         return hmm.HmmParameterGeneratorRandomTransition(hidden_state_size, window_length, seed)
+    elif parameter_mode == "partial_det":
+        logging.info("Parameter generation mode partial_det is used.")
+        return hmm.HmmParameterGeneratorPartialDetTransition(hidden_state_size, window_length, emission_error, seed, 0.5)
     else:
         logging.error("Parameter generation mode {0} cannot be recognized, using peak instead.".format(parameter_mode))
         return hmm.HmmParameterGenerateorWithPeak(hidden_state_size, window_length, emission_error);
@@ -164,6 +168,12 @@ def logging_learned_matrix(lmap_fname):
         for i in range(0, num_state):
             for j in range(0, num_state):
                 logging.info("Pr(Hi=%s|Hj=%s) = %s" % (i,j, negative_transition[(str(i),str(j))]))
+    if "emission" in result:
+        logging.info("Emission Pr:")
+        num_state = len(initial_pr)
+        for i in range(0, num_state):
+            for j in range(0, 2):
+                logging.info("Pr(Ei=%s|Hj=%s) = %s" % (j , i, emission[(str(j), str(i))]))
     if "thres" in result:
         logging.info("Thres :")
         for i in range(0, len(thres)):
@@ -200,7 +210,7 @@ if __name__ == "__main__":
     emission_error = config.setdefault("emission_error", 0.2)
     missing_mode = config.setdefault("missing_mode", "MCAR")
     missing_pr = config.setdefault("missing_pr", 0)
-    gamma_config = config.setdefault("gamma_config", {"min": 7.999, "max":8, "default":0})
+    gamma_config = config.setdefault("gamma_config", {"min": -8, "max":8, "default":0})
     gamma_min = gamma_config["min"]
     gamma_max = gamma_config["max"]
     gamma_default = gamma_config["default"]
@@ -223,9 +233,11 @@ if __name__ == "__main__":
     merge_hmm_parameters.MergeParameters(ac_fname_prefix+".tac", ac_fname_prefix+".lmap", ac_fname_prefix+".tac", ac_fname_prefix+".lmap")
     merge_hmm_parameters.MergeParameters(tac_fname_prefix+".tac", tac_fname_prefix+".lmap", tac_fname_prefix+".tac", tac_fname_prefix+".lmap")
     # Simulate data
-    parameter_generator = get_hmm_parameter_generator(config, seed)
+    parameter_generator = get_hmm_parameter_generator(config, None)
+    #true_model = hmm.HetHmm(chain_length, window_length, hidden_state_size, parameter_generator)
     true_model = hmm.Hmm(chain_length, window_length, hidden_state_size, parameter_generator)
-    generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, missing_mode, seed);
+    #generated_examples = true_model.generate_dataset(training_size + testing_size, missing_pr, missing_mode, seed);
+    generated_examples = true_model.generate_dataset_with_soft_evidence (training_size + testing_size, seed)
     training_data = generated_examples[:training_size]
     testing_data = generated_examples[training_size:]
     training_dataset_fname = "%s/training.csv" % working_dir
@@ -257,7 +269,7 @@ if __name__ == "__main__":
     logging.info("Logging learned parameters for TAC:")
     logging_learned_matrix(tac_weight_lmap_fname)
     logging.info("Running verification")
-    validation.validateHMM(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname, true_model)
+    #validation.validateHMM(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname, true_model)
     #validation.validate(ac_network_fname, ac_weight_lmap_fname, tac_network_fname, tac_weight_lmap_fname, prediction_fname)
 
 def java_sim():

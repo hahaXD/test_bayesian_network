@@ -25,6 +25,9 @@ def step(x,T,p,n):
 def _my_mean_squared_error(labels,predictions):
     return tf.reduce_mean(tf.squared_difference(labels,predictions))
 
+def my_entropy(labels,predictions):
+    return tf.reduce_mean(-labels * tf.math.log(predictions) - (1-labels)*tf.math.log(1-predictions))
+
 def _my_regularizer(weights):
     return tf.reduce_sum(weights*weights)
 
@@ -102,7 +105,18 @@ class TacNode:
         for node in self:
             if node.is_literal():
                 lit_id = node.literal
-                data = lmap[lit_id].tf_node
+                import re
+                pattern = re.compile(r"Ei=([0-9]+) *\| *Hi=([0-9]+)")
+                cur_match = pattern.match(lmap[lit_id].st)
+                if cur_match:
+                    e_val = int(cur_match.group(1))
+                    h_val = int(cur_match.group(2))
+                    if ( (h_val % 2) == e_val ):
+                        data = 0.8
+                    else:
+                        data = 0.2
+                else:
+                    data = lmap[lit_id].tf_node
             elif node.is_sum():
                 sum_node = node.children[0].data
                 for child in node.children[1:]:
@@ -136,6 +150,7 @@ class TacNode:
                 else:
                     raise Exception("invalid compiler: " + compiler)
                 data = (i1-i0)*tf.sigmoid(gamma*(pr-th))+i0
+                #data = tf.math.abs(i0 + (i1-i0) * (pr-th))
             elif node.is_normalize():
                 sum_node = node.children[0].data
                 for child in node.children[1:]:
@@ -456,7 +471,8 @@ def learn(node,training_examples,training_labels,testing_examples,
 
     gate = tf.train.GradientDescentOptimizer.GATE_GRAPH
     #loss = tf.losses.mean_squared_error(labels=y_,predictions=tac)
-    loss = _my_mean_squared_error(y_,tac)
+    #loss = _my_mean_squared_error(y_,tac)
+    loss = my_entropy(y_, tac)
     #loss += 0.00002*my_regularizer(W) #ACAC
     grad = tf.gradients(loss,W)[0]
     #optimizer = tf.train.GradientDescentOptimizer(rate).minimize(loss,gate_gradients=gate)
