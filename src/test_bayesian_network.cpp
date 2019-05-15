@@ -179,7 +179,7 @@ TestBayesianNetwork::ParseTestBayesianNetworkFromNetFile(const char *filename) {
   std::regex diagnosistype_line_pattern("diagnosistype = \\\"([^\\\"]*)\\\";");
   std::regex decision_line_pattern("isdecisionvariable = \\\"([^\\\"]*)\\\";");
   std::regex potential_pattern("potential \\(([^\\(\\)]*)\\)");
-  std::regex node_name_pattern("\\b([a-zA-Z0-9]+)\\b");
+  std::regex node_name_pattern("\\b([a-zA-Z0-9_]+)\\b");
   std::unordered_map<std::string, bool> test_node_per_variable;
   std::unordered_map<std::string, std::vector<std::string>>
       domain_names_per_variable;
@@ -214,9 +214,7 @@ TestBayesianNetwork::ParseTestBayesianNetworkFromNetFile(const char *filename) {
         } else if (m[1] == "OBSERVATION") {
           variable_type_per_variable[node_name] = variable_type::evidence;
         } else {
-          assert(m[1] == "TARGET");
-          variable_type_per_variable[node_name] = variable_type::query;
-        }
+          assert(m[1] == "TARGET"); variable_type_per_variable[node_name] = variable_type::query;}
         continue;
       }
       if (std::regex_search(line, m, decision_line_pattern)) {
