@@ -25,6 +25,10 @@ public:
   Node *NewTestThresholdParameterTerminalNode(
       std::vector<Variable *> parent_variables, Variable *child_variable,
       std::vector<DomainSize> parent_configurations);
+  Node *NewTestGammaParameterTerminalNode(
+      std::vector<Variable *> parent_variables, Variable *child_variable,
+      std::vector<DomainSize> parent_configurations);
+
   Node *NewTestProbabilityParameterTerminalNode(
       bool test_result, std::vector<Variable *> parent_variables,
       Variable *child_variable, std::vector<DomainSize> parent_configurations,
@@ -38,6 +42,8 @@ private:
   std::list<std::unique_ptr<Node>> node_cache_;
   std::unordered_map<NodeSize, std::vector<Node *>> unique_variable_nodes_;
   std::unordered_map<NodeSize, CircuitFactor> unique_threshold_nodes_;
+  std::unordered_map<NodeSize, CircuitFactor> unique_gamma_nodes_;
+  Node *global_gamma_node_;
   uintmax_t next_node_id_;
 };
 } // namespace test_circuit

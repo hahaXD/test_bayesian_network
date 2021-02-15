@@ -17,7 +17,8 @@ bool compare_node_ids(Node *a, Node *b) { return a->node_id() < b->node_id(); }
 
 namespace test_bayesian_network {
 namespace test_circuit {
-CircuitManager::CircuitManager() : unique_variable_nodes_(), next_node_id_(0) {}
+CircuitManager::CircuitManager()
+    : unique_variable_nodes_(), global_gamma_node_(nullptr), next_node_id_(0) {}
 
 Node *CircuitManager::NewProductNode(std::vector<Node *> children) {
   std::sort(children.begin(), children.end(), compare_node_ids);
@@ -81,11 +82,11 @@ Node *CircuitManager::NewTestThresholdParameterTerminalNode(
   if (variable_it == unique_threshold_nodes_.end()) {
     std::vector<Node *> factor(CircuitFactor::GetFactorSize(parent_variables),
                                nullptr);
-    variable_it =
-        unique_threshold_nodes_
-            .insert(std::make_pair(child_variable->variable_index(),
-                                   CircuitFactor(parent_variables, factor)))
-            .first;
+    variable_it = unique_threshold_nodes_
+                      .insert(std::make_pair(
+                          child_variable->variable_index(),
+                          CircuitFactor(parent_variables, std::move(factor))))
+                      .first;
   }
   Node *result_node = variable_it->second.GetNodeFromVariableConfiguration(
       parent_configurations);
@@ -212,5 +213,44 @@ void CircuitManager::SaveAsTacFile(Node *root_node, const char *tac_filename,
   }
   output_file.close();
 }
+
+Node *CircuitManager::NewTestGammaParameterTerminalNode(
+    std::vector<Variable *> parent_variables, Variable *child_variable,
+    std::vector<DomainSize> parent_configurations) {
+  if (child_variable == nullptr) {
+    if (global_gamma_node_ == nullptr) {
+      node_cache_.push_back(std::make_unique<TestGammaParameterTerminalNode>(
+          next_node_id_++, std::move(parent_variables), child_variable,
+          std::move(parent_configurations)));
+      global_gamma_node_ = node_cache_.back().get();
+    }
+    return global_gamma_node_;
+  } else {
+    auto variable_it =
+        unique_gamma_nodes_.find(child_variable->variable_index());
+    if (variable_it == unique_gamma_nodes_.end()) {
+      std::vector<Node *> factor(CircuitFactor::GetFactorSize(parent_variables),
+                                 nullptr);
+      variable_it = unique_gamma_nodes_
+                        .insert(std::make_pair(
+                            child_variable->variable_index(),
+                            CircuitFactor(parent_variables, std::move(factor))))
+                        .first;
+    }
+    Node *result_node = variable_it->second.GetNodeFromVariableConfiguration(
+        parent_configurations);
+    if (result_node == nullptr) {
+      node_cache_.push_back(std::make_unique<TestGammaParameterTerminalNode>(
+          next_node_id_++, std::move(parent_variables), child_variable,
+          std::move(parent_configurations)));
+      result_node = node_cache_.back().get();
+      variable_it->second.SetNodeFromVariableConfiguration(
+          result_node->get_parameter_terminal_node()->parent_configurations(),
+          result_node);
+    }
+    return result_node;
+  }
+}
+
 } // namespace test_circuit
 } // namespace test_bayesian_network

@@ -34,7 +34,7 @@ public:
   std::vector<Variable *>
   GetEliminationOrder(const std::vector<Node *> &nodes_to_query) const;
 
-  const std::vector<Node *> nodes() const;
+  const std::vector<Node *>& nodes() const;
 
 private:
   // topological sorted nodes

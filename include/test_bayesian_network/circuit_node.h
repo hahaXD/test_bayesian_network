@@ -14,6 +14,7 @@ enum node_type {
   variable = 'v',
   parameter = 'p',
   threshold_parameter = 'r',
+  gamma_parameter = 'g',
   test_probability_parameter = 'q',
   z = 'Z'
 };
@@ -24,6 +25,7 @@ class TestNode;
 class VariableTerminalNode;
 class ParameterTerminalNode;
 class TestThresholdParameterTerminalNode;
+class TestGammaParameterTerminalNode;
 class TestProbabilityParameterTerminalNode;
 class ZNode;
 
@@ -45,6 +47,10 @@ public:
   virtual bool is_leaf() const { return false; }
   virtual TestThresholdParameterTerminalNode *
   get_test_threshold_parameter_terminal_node() {
+    return nullptr;
+  }
+  virtual TestGammaParameterTerminalNode *
+  get_test_gamma_parameter_terminal_node() {
     return nullptr;
   }
   virtual TestProbabilityParameterTerminalNode *
@@ -75,10 +81,10 @@ public:
   ProductNode *get_product_node() override { return this; }
 };
 
-// TestNode should has five children. The first child is the Pr(pa,e). The
+// TestNode should has six children. The first child is the Pr(pa,e). The
 // second child is the Pr(e). The third child is the test threshold. The last
 // two children are two inputs that we want to select based on the test outcome
-// and test threshold.
+// and test threshold. The last child is the gamma parameter.
 class TestNode : public Node {
 public:
   TestNode(CircuitSize node_id, std::vector<Node *> children)
@@ -156,6 +162,39 @@ protected:
   Variable *child_variable_;
   std::vector<DomainSize> parent_configurations_;
   DomainSize child_configuration_;
+};
+
+class TestGammaParameterTerminalNode : public ParameterTerminalNode {
+public:
+  TestGammaParameterTerminalNode(CircuitSize node_id,
+                                 std::vector<Variable *> parent_variables,
+                                 Variable *child_variable,
+                                 std::vector<DomainSize> parent_configurations)
+      : ParameterTerminalNode(node_id, std::move(parent_variables),
+                              child_variable, std::move(parent_configurations),
+                              0, node_type::gamma_parameter) {}
+  TestGammaParameterTerminalNode *
+  get_test_gamma_parameter_terminal_node() override {
+    return this;
+  }
+
+  bool is_leaf() const override { return true; }
+
+  std::string Label() const override {
+    if (child_variable_ == nullptr) {
+      // global gamma
+      return "GLOBAL Gamma";
+    }
+    std::string result = child_variable_->variable_name() + " | ";
+    const NodeSize parent_size = parent_variables_.size();
+    for (auto i = 0; i < parent_size; ++i) {
+      result +=
+          parent_variables_[i]->variable_name() + "=" +
+          parent_variables_[i]->domain_names()[parent_configurations_[i]] + " ";
+    }
+    result += "Gamma";
+    return result;
+  }
 };
 
 class TestThresholdParameterTerminalNode : public ParameterTerminalNode {

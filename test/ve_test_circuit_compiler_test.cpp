@@ -82,7 +82,12 @@ TEST(VE_TEST_CIRCUIT_COMPILER_TEST, SIMPLE_TEST) {
   auto input_network = ConstructNetwork1();
   test_circuit::CircuitManager circuit_manager;
   VeTestCircuitCompiler vtcc(input_network.get(), &circuit_manager);
-  auto result = vtcc.Run();
+  Node* a_1 = input_network->nodes()[1];
+  Node* a_3 = input_network->nodes()[3];
+  Node* b_1 = input_network->nodes()[4];
+  Node* b_3 = input_network->nodes()[6];
+  Node* q = input_network->nodes()[7];
+  auto result = vtcc.Run({a_1, a_3, b_1, b_3, q});
   EXPECT_EQ(result->children().size(), (size_t)3);
 }
 } // namespace test_bayesian_network

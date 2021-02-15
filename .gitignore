@@ -1,3 +1,4 @@
 doc
 .clang_complete
 build
+*.pyc

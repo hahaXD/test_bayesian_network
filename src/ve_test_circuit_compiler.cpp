@@ -9,25 +9,38 @@
 namespace test_bayesian_network {
 VeTestCircuitCompiler::VeTestCircuitCompiler(
     TestBayesianNetwork *input_network,
-    test_circuit::CircuitManager *circuit_manager)
-    : input_network_(input_network), circuit_manager_(circuit_manager) {}
+    test_circuit::CircuitManager *circuit_manager, bool global_gamma)
+    : input_network_(input_network), circuit_manager_(circuit_manager),
+      global_gamma_(global_gamma) {}
 
-test_circuit::ZNode *VeTestCircuitCompiler::Run() const {
+test_circuit::ZNode *
+VeTestCircuitCompiler::Run(const std::vector<Node *> &test_node_order) const {
   std::vector<Node *> nodes = input_network_->nodes();
   std::unordered_set<Node *> unselected_testing_nodes;
   Node *query_node = nullptr;
+  std::vector<Node *> node_order;
   for (Node *cur_node : nodes) {
     if (cur_node->type() == node_type::test) {
       unselected_testing_nodes.insert(cur_node);
+    } else {
+      node_order.push_back(cur_node);
     }
     if (cur_node->variable()->type() == variable_type::query) {
       query_node = cur_node;
     }
   }
+  for (Node *cur_test_node : test_node_order) {
+    node_order.push_back(cur_test_node);
+    assert(unselected_testing_nodes.find(cur_test_node) !=
+           unselected_testing_nodes.end());
+  }
+  if (node_order.size() != nodes.size()) {
+    return nullptr;
+  }
   if (query_node == nullptr) {
     return nullptr;
   }
-  for (Node *cur_node : nodes) {
+  for (Node *cur_node : node_order) {
     Variable *cur_variable = cur_node->variable();
     size_t factor_size = cur_variable->domain_size();
     std::vector<Variable *> variable_in_factor;
@@ -113,6 +126,14 @@ test_circuit::ZNode *VeTestCircuitCompiler::Run() const {
         auto threshold_parameter =
             circuit_manager_->NewTestThresholdParameterTerminalNode(
                 variable_in_parent, cur_variable, parent_configuration);
+        test_circuit::Node *gamma_node = nullptr;
+        if (global_gamma_) {
+          gamma_node = circuit_manager_->NewTestGammaParameterTerminalNode(
+              {}, nullptr, {});
+        } else {
+          gamma_node = circuit_manager_->NewTestGammaParameterTerminalNode(
+              variable_in_parent, cur_variable, parent_configuration);
+        }
         auto positive_parameter =
             circuit_manager_->NewTestProbabilityParameterTerminalNode(
                 true, variable_in_parent, cur_variable, parent_configuration,
@@ -123,7 +144,8 @@ test_circuit::ZNode *VeTestCircuitCompiler::Run() const {
                 configuration[child_variable_pos]);
         auto test_node = circuit_manager_->NewTestNode(
             {result->factor_nodes()[index_for_parent_config], pr_e_node,
-             threshold_parameter, negative_parameter, positive_parameter});
+             threshold_parameter, negative_parameter, positive_parameter,
+             gamma_node});
         if (cur_node->variable()->type() == variable_type::evidence) {
           auto variable_node = circuit_manager_->NewVariableTerminalNode(
               cur_variable, configuration[child_variable_pos]);
